@@ -37,8 +37,42 @@ class DailyTimeline {
         syncNowBtn.addEventListener('click', () => this.manualSync());
         clearDataBtn.addEventListener('click', () => this.clearLocalData());
         
+        // Handle timeline actions with event delegation
+        document.addEventListener('click', (e) => this.handleTimelineActions(e));
+        
         // Load saved token if exists
         this.loadGitHubToken();
+    }
+
+    handleTimelineActions(e) {
+        console.log('Event delegation triggered:', e.target);
+        
+        // Handle edit button clicks
+        if (e.target.classList.contains('btn-edit')) {
+            console.log('Edit button clicked');
+            const taskId = parseInt(e.target.getAttribute('data-task-id'));
+            console.log('Task ID for edit:', taskId);
+            if (taskId) {
+                this.editTask(taskId);
+            }
+        }
+        
+        // Handle delete button clicks
+        if (e.target.classList.contains('btn-delete')) {
+            console.log('Delete button clicked');
+            const taskId = parseInt(e.target.getAttribute('data-task-id'));
+            console.log('Task ID for delete:', taskId);
+            if (taskId) {
+                this.deleteTask(taskId);
+            }
+        }
+        
+        // Handle image clicks for modal
+        if (e.target.tagName === 'IMG' && e.target.closest('.timeline-image')) {
+            console.log('Image clicked for modal');
+            const imageSrc = e.target.src;
+            this.showImageModal(imageSrc);
+        }
     }
 
     async loadData() {
@@ -227,7 +261,9 @@ class DailyTimeline {
     }
 
     async deleteTask(id) {
+        console.log('deleteTask called with ID:', id);
         if (confirm('Apakah Anda yakin ingin menghapus aktivitas ini?')) {
+            console.log('Deleting task with ID:', id);
             this.dailyTasks = this.dailyTasks.filter(t => t.id !== id);
             this.saveToLocalStorage();
             
@@ -240,8 +276,11 @@ class DailyTimeline {
     }
 
     editTask(id) {
+        console.log('editTask called with ID:', id);
         const task = this.dailyTasks.find(t => t.id === id);
+        console.log('Found task:', task);
         if (task) {
+            console.log('Setting up edit mode for task:', task.title);
             this.isEditing = true;
             this.editingId = id;
             
@@ -264,6 +303,8 @@ class DailyTimeline {
             document.getElementById('form-title').textContent = 'Edit Aktivitas';
             document.getElementById('submit-btn').textContent = 'Update Aktivitas';
             document.getElementById('cancel-btn').style.display = 'inline-block';
+        } else {
+            console.log('Task not found with ID:', id);
         }
     }
 
@@ -412,7 +453,7 @@ class DailyTimeline {
                         <div class="timeline-description">${task.description}</div>
                         ${task.image ? `
                             <div class="timeline-image">
-                                <img src="${task.image.data}" alt="Aktivitas image" onclick="timeline.showImageModal('${task.image.data}')">
+                                <img src="${task.image.data}" alt="Aktivitas image" style="cursor: pointer;">
                             </div>
                         ` : ''}
                         <div class="timeline-meta">
@@ -420,10 +461,10 @@ class DailyTimeline {
                             <div class="timeline-status ${statusClass}">${task.status}</div>
                         </div>
                         <div class="timeline-actions">
-                            <button class="btn-edit" onclick="timeline.editTask(${task.id})">
+                            <button class="btn-edit" data-task-id="${task.id}">
                                 Edit
                             </button>
-                            <button class="btn-delete" onclick="timeline.deleteTask(${task.id})">
+                            <button class="btn-delete" data-task-id="${task.id}">
                                 Hapus
                             </button>
                         </div>
