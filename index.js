@@ -14,6 +14,7 @@ class DailyTimeline {
     }
 
     initializeEventListeners() {
+        // Get all required elements with null checks
         const form = document.getElementById('daily-form');
         const cancelBtn = document.getElementById('cancel-btn');
         const filterBtns = document.querySelectorAll('.filter-btn');
@@ -21,45 +22,52 @@ class DailyTimeline {
         const saveTokenBtn = document.getElementById('save-token-btn');
         const syncNowBtn = document.getElementById('sync-now-btn');
         const refreshCloudBtn = document.getElementById('refresh-cloud-btn');
+        const debugStateBtn = document.getElementById('debug-state-btn');
         const clearDataBtn = document.getElementById('clear-data-btn');
 
-        form.addEventListener('submit', (e) => this.handleFormSubmit(e));
-        cancelBtn.addEventListener('click', () => this.cancelEdit());
+        // Add event listeners only if elements exist
+        if (form) {
+            form.addEventListener('submit', (e) => this.handleFormSubmit(e));
+        }
         
-        filterBtns.forEach(btn => {
-            btn.addEventListener('click', (e) => this.handleFilter(e));
-        });
+        if (cancelBtn) {
+            cancelBtn.addEventListener('click', () => this.cancelEdit());
+        }
+        
+        if (filterBtns && filterBtns.length > 0) {
+            filterBtns.forEach(btn => {
+                btn.addEventListener('click', (e) => this.handleFilter(e));
+            });
+        }
         
         // Handle image upload and preview
-        imageInput.addEventListener('change', (e) => this.handleImageUpload(e));
+        if (imageInput) {
+            imageInput.addEventListener('change', (e) => this.handleImageUpload(e));
+        }
         
         // Handle cloud sync
-        saveTokenBtn.addEventListener('click', () => this.saveGitHubToken());
-        syncNowBtn.addEventListener('click', () => this.manualSync());
-        refreshCloudBtn.addEventListener('click', () => this.forceRefreshFromCloud());
-        clearDataBtn.addEventListener('click', () => this.clearLocalData());
+        if (saveTokenBtn) {
+            saveTokenBtn.addEventListener('click', () => this.saveGitHubToken());
+        }
         
-        // Handle timeline actions with event delegation
+        if (syncNowBtn) {
+            syncNowBtn.addEventListener('click', () => this.manualSync());
+        }
+        
+        if (refreshCloudBtn) {
+            refreshCloudBtn.addEventListener('click', () => this.forceRefreshFromCloud());
+        }
+        
+        if (debugStateBtn) {
+            debugStateBtn.addEventListener('click', () => this.debugCurrentState());
+        }
+        
+        if (clearDataBtn) {
+            clearDataBtn.addEventListener('click', () => this.clearLocalData());
+        }
+        
+        // Handle timeline actions with event delegation (always available)
         document.addEventListener('click', (e) => this.handleTimelineActions(e));
-        
-        // Alternative: direct event listeners for timeline actions
-        document.addEventListener('click', (e) => {
-            if (e.target.matches('.btn-edit')) {
-                const taskId = parseInt(e.target.getAttribute('data-task-id'));
-                if (taskId) {
-                    console.log('Direct edit button click, task ID:', taskId);
-                    this.editTask(taskId);
-                }
-            }
-            
-            if (e.target.matches('.btn-delete')) {
-                const taskId = parseInt(e.target.getAttribute('data-task-id'));
-                if (taskId) {
-                    console.log('Direct delete button click, task ID:', taskId);
-                    this.deleteTask(taskId);
-                }
-            }
-        });
         
         // Load saved token if exists
         this.loadGitHubToken();
@@ -117,6 +125,13 @@ class DailyTimeline {
         console.log('Clicked element:', e.target);
         console.log('Element classes:', e.target.className);
         console.log('Element attributes:', e.target.attributes);
+        
+        // Additional check for button clicks
+        if (e.target.matches('button')) {
+            console.log('Button clicked:', e.target.textContent);
+            console.log('Button classes:', e.target.className);
+            console.log('Button dataset:', e.target.dataset);
+        }
     }
 
     async loadData() {
@@ -146,10 +161,22 @@ class DailyTimeline {
                         const remoteData = JSON.parse(timelineFile.content);
                         console.log('Remote data loaded:', remoteData);
                         
-                        // Merge remote data with local data, prioritizing remote
-                        this.dailyTasks = this.mergeData(remoteData.dailyTasks || remoteData, this.dailyTasks);
-                        this.saveToLocalStorage();
-                        this.showNotification('Data berhasil disinkronisasi dari cloud!', 'success');
+                        // Handle different data structures
+                        let remoteTasks = [];
+                        if (remoteData.dailyTasks && Array.isArray(remoteData.dailyTasks)) {
+                            remoteTasks = remoteData.dailyTasks;
+                        } else if (Array.isArray(remoteData)) {
+                            remoteTasks = remoteData;
+                        }
+                        
+                        if (remoteTasks.length > 0) {
+                            // Merge remote data with local data, prioritizing remote
+                            this.dailyTasks = this.mergeData(remoteTasks, this.dailyTasks);
+                            this.saveToLocalStorage();
+                            this.showNotification('Data berhasil disinkronisasi dari cloud!', 'success');
+                        } else {
+                            console.log('No valid task data found in Gist');
+                        }
                     } else {
                         console.log('No timeline data found in Gist');
                     }
@@ -402,9 +429,14 @@ class DailyTimeline {
 
     clearImagePreview() {
         const preview = document.getElementById('image-preview');
-        preview.innerHTML = '';
-        preview.classList.remove('show');
-        document.getElementById('task-image').value = '';
+        if (preview) {
+            preview.innerHTML = '';
+            preview.classList.remove('show');
+        }
+        const imageInput = document.getElementById('task-image');
+        if (imageInput) {
+            imageInput.value = '';
+        }
     }
 
     createImageModal() {
@@ -610,19 +642,50 @@ class DailyTimeline {
     }
 
     async forceRefreshFromCloud() {
-        if (this.githubToken && this.gistId) {
-            console.log('Force refresh from cloud');
-            try {
+        if (!this.githubToken) {
+            this.showNotification('Token GitHub belum dikonfigurasi', 'error');
+            return;
+        }
+        
+        console.log('Force refresh from cloud');
+        console.log('Current state:', {
+            hasToken: !!this.githubToken,
+            hasGistId: !!this.gistId,
+            gistId: this.gistId,
+            localTasksCount: this.dailyTasks.length
+        });
+        
+        try {
+            // Try to load from Gist if we have one
+            if (this.gistId) {
                 await this.loadFromGist();
                 this.renderTimeline();
                 this.showNotification('Data berhasil di-refresh dari cloud!', 'success');
-            } catch (error) {
-                console.error('Force refresh failed:', error);
-                this.showNotification('Gagal refresh data dari cloud', 'error');
+            } else {
+                // If no Gist ID, try to create one with existing data
+                if (this.dailyTasks.length > 0) {
+                    await this.saveToCloud();
+                    this.showNotification('Data berhasil disimpan ke cloud!', 'success');
+                } else {
+                    this.showNotification('Tidak ada data untuk disinkronisasi', 'info');
+                }
             }
-        } else {
-            this.showNotification('Token GitHub atau Gist ID tidak tersedia', 'error');
+        } catch (error) {
+            console.error('Force refresh failed:', error);
+            this.showNotification('Gagal refresh data dari cloud', 'error');
         }
+    }
+
+    // Debug method to check current state
+    debugCurrentState() {
+        console.log('=== DEBUG CURRENT STATE ===');
+        console.log('GitHub Token:', this.githubToken ? '✅ Set' : '❌ Not set');
+        console.log('Gist ID:', this.gistId || '❌ Not set');
+        console.log('Local Tasks Count:', this.dailyTasks.length);
+        console.log('Local Storage dailyTasks:', localStorage.getItem('dailyTasks') ? '✅ Set' : '❌ Not set');
+        console.log('Local Storage timelineGistId:', localStorage.getItem('timelineGistId') || '❌ Not set');
+        console.log('Local Storage githubToken:', localStorage.getItem('githubToken') ? '✅ Set' : '❌ Not set');
+        console.log('==========================');
     }
 
     clearLocalData() {

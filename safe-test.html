@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Safe Test - Timeline</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-button {
+            background: #007bff;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px;
+            margin: 5px;
+            cursor: pointer;
+        }
+        .test-button:hover {
+            background: #0056b3;
+        }
+        .test-button:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        .status.success { background: #d4edda; color: #155724; }
+        .status.error { background: #f8d7da; color: #721c24; }
+        .status.info { background: #d1ecf1; color: #0c5460; }
+        .status.warning { background: #fff3cd; color: #856404; }
+        .console {
+            background: #000;
+            color: #0f0;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: monospace;
+            max-height: 300px;
+            overflow-y: auto;
+            margin: 10px 0;
+        }
+        .timeline-item {
+            background: white;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+        }
+        .btn-edit, .btn-delete {
+            padding: 5px 10px;
+            margin: 0 5px;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        .btn-edit { background: #ffc107; color: #000; }
+        .btn-delete { background: #dc3545; color: white; }
+        .method-list {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🛡️ Safe Test - Timeline Magang</h1>
+    
+    <div class="test-section">
+        <h3>🔧 Test Controls</h3>
+        <button class="test-button" onclick="checkTimeline()" id="check-btn">🔍 Check Timeline</button>
+        <button class="test-button" onclick="addTestTask()" id="add-btn" disabled>➕ Add Test Task</button>
+        <button class="test-button" onclick="testEditButton()" id="edit-btn" disabled>✏️ Test Edit</button>
+        <button class="test-button" onclick="testDeleteButton()" id="delete-btn" disabled>🗑️ Test Delete</button>
+        <button class="test-button" onclick="clearConsole()">🧹 Clear Console</button>
+    </div>
+
+    <div class="test-section">
+        <h3>📊 Timeline Status</h3>
+        <div id="status"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>📝 Console Output</h3>
+        <div id="console" class="console"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>📋 Timeline Items</h3>
+        <div id="timeline-display"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>🔍 Available Methods</h3>
+        <div id="method-list" class="method-list">Loading...</div>
+    </div>
+
+    <script src="index.js"></script>
+    <script>
+        // Console logging
+        function log(message, type = 'info') {
+            const console = document.getElementById('console');
+            const timestamp = new Date().toLocaleTimeString();
+            const color = type === 'error' ? '#ff6b6b' : 
+                         type === 'success' ? '#51cf66' : 
+                         type === 'warning' ? '#ffd43b' : '#0f0';
+            console.innerHTML += `<div style="color: ${color}">[${timestamp}] ${message}</div>`;
+            console.scrollTop = console.scrollHeight;
+        }
+
+        // Update status
+        function updateStatus() {
+            const status = document.getElementById('status');
+            if (window.timeline) {
+                const hasTasks = window.timeline.dailyTasks && window.timeline.dailyTasks.length > 0;
+                const taskCount = hasTasks ? window.timeline.dailyTasks.length : 0;
+                
+                status.innerHTML = `
+                    <div class="status success">✅ Timeline Ready</div>
+                    <div class="status info">Tasks: ${taskCount}</div>
+                    <div class="status info">Editing: ${window.timeline.isEditing ? 'Yes' : 'No'}</div>
+                    <div class="status info">Editing ID: ${window.timeline.editingId || 'None'}</div>
+                `;
+            } else {
+                status.innerHTML = '<div class="status error">❌ Timeline Not Ready</div>';
+            }
+        }
+
+        // Update method list
+        function updateMethodList() {
+            const methodList = document.getElementById('method-list');
+            if (window.timeline) {
+                const methods = Object.getOwnPropertyNames(Object.getPrototypeOf(window.timeline))
+                    .filter(method => method !== 'constructor')
+                    .sort();
+                methodList.innerHTML = methods.map(method => 
+                    `<div>✅ ${method}</div>`
+                ).join('');
+            } else {
+                methodList.innerHTML = '<div>❌ Timeline not available</div>';
+            }
+        }
+
+        // Display timeline items
+        function displayTimeline() {
+            const display = document.getElementById('timeline-display');
+            if (!window.timeline || !window.timeline.dailyTasks) {
+                display.innerHTML = '<p>No timeline data available</p>';
+                return;
+            }
+
+            if (window.timeline.dailyTasks.length === 0) {
+                display.innerHTML = '<p>No tasks available</p>';
+                return;
+            }
+
+            display.innerHTML = window.timeline.dailyTasks.map(task => `
+                <div class="timeline-item">
+                    <strong>${task.title}</strong> (ID: ${task.id})<br>
+                    <small>${task.description}</small><br>
+                    <button class="btn-edit" data-task-id="${task.id}" onclick="manualEdit(${task.id})">Edit</button>
+                    <button class="btn-delete" data-task-id="${task.id}" onclick="manualDelete(${task.id})">Delete</button>
+                </div>
+            `).join('');
+        }
+
+        // Check timeline availability
+        function checkTimeline() {
+            log('🔍 Checking timeline availability...', 'info');
+            
+            if (window.timeline) {
+                log('✅ Timeline instance found!', 'success');
+                
+                // Check if methods are available
+                const requiredMethods = ['addTask', 'editTask', 'deleteTask', 'debugCurrentState'];
+                const availableMethods = requiredMethods.filter(method => 
+                    typeof window.timeline[method] === 'function'
+                );
+                
+                if (availableMethods.length === requiredMethods.length) {
+                    log('✅ All required methods available', 'success');
+                    enableButtons();
+                } else {
+                    const missingMethods = requiredMethods.filter(method => 
+                        !availableMethods.includes(method)
+                    );
+                    log(`⚠️ Missing methods: ${missingMethods.join(', ')}`, 'warning');
+                }
+                
+                updateStatus();
+                updateMethodList();
+                displayTimeline();
+            } else {
+                log('❌ Timeline instance not found', 'error');
+                disableButtons();
+            }
+        }
+
+        // Enable/disable buttons
+        function enableButtons() {
+            document.getElementById('add-btn').disabled = false;
+            document.getElementById('edit-btn').disabled = false;
+            document.getElementById('delete-btn').disabled = false;
+        }
+
+        function disableButtons() {
+            document.getElementById('add-btn').disabled = true;
+            document.getElementById('edit-btn').disabled = true;
+            document.getElementById('delete-btn').disabled = true;
+        }
+
+        // Test functions
+        function addTestTask() {
+            if (!window.timeline) {
+                log('❌ Timeline not available', 'error');
+                return;
+            }
+
+            if (typeof window.timeline.addTask !== 'function') {
+                log('❌ addTask method not available', 'error');
+                return;
+            }
+
+            const testTask = {
+                date: new Date().toISOString().split('T')[0],
+                title: 'Test Task ' + Date.now(),
+                description: 'This is a test task for debugging edit functionality',
+                category: 'Testing',
+                duration: 2.0,
+                status: 'Selesai'
+            };
+
+            try {
+                window.timeline.addTask(testTask);
+                log('✅ Test task added successfully', 'success');
+                updateStatus();
+                displayTimeline();
+            } catch (error) {
+                log(`❌ Failed to add task: ${error.message}`, 'error');
+            }
+        }
+
+        function testEditButton() {
+            if (!window.timeline) {
+                log('❌ Timeline not available', 'error');
+                return;
+            }
+
+            if (typeof window.timeline.editTask !== 'function') {
+                log('❌ editTask method not available', 'error');
+                return;
+            }
+
+            if (!window.timeline.dailyTasks || window.timeline.dailyTasks.length === 0) {
+                log('❌ No tasks available for testing edit', 'error');
+                return;
+            }
+
+            const firstTask = window.timeline.dailyTasks[0];
+            log(`🔍 Testing edit for task: ${firstTask.title} (ID: ${firstTask.id})`, 'info');
+            
+            try {
+                window.timeline.editTask(firstTask.id);
+                log('✅ Edit test successful', 'success');
+                updateStatus();
+            } catch (error) {
+                log(`❌ Edit test failed: ${error.message}`, 'error');
+            }
+        }
+
+        function testDeleteButton() {
+            if (!window.timeline) {
+                log('❌ Timeline not available', 'error');
+                return;
+            }
+
+            if (typeof window.timeline.deleteTask !== 'function') {
+                log('❌ deleteTask method not available', 'error');
+                return;
+            }
+
+            if (!window.timeline.dailyTasks || window.timeline.dailyTasks.length === 0) {
+                log('❌ No tasks available for testing delete', 'error');
+                return;
+            }
+
+            const firstTask = window.timeline.dailyTasks[0];
+            log(`🔍 Testing delete for task: ${firstTask.title} (ID: ${firstTask.id})`, 'info');
+            
+            try {
+                window.timeline.deleteTask(firstTask.id);
+                log('✅ Delete test successful', 'success');
+                updateStatus();
+                displayTimeline();
+            } catch (error) {
+                log(`❌ Delete test failed: ${error.message}`, 'error');
+            }
+        }
+
+        function clearConsole() {
+            document.getElementById('console').innerHTML = '';
+        }
+
+        // Manual button handlers
+        function manualEdit(taskId) {
+            log(`🔍 Manual edit button clicked for task ID: ${taskId}`, 'info');
+            if (window.timeline && typeof window.timeline.editTask === 'function') {
+                try {
+                    window.timeline.editTask(taskId);
+                    log('✅ Manual edit successful', 'success');
+                    updateStatus();
+                } catch (error) {
+                    log(`❌ Manual edit failed: ${error.message}`, 'error');
+                }
+            } else {
+                log('❌ editTask method not available', 'error');
+            }
+        }
+
+        function manualDelete(taskId) {
+            log(`🔍 Manual delete button clicked for task ID: ${taskId}`, 'info');
+            if (window.timeline && typeof window.timeline.deleteTask === 'function') {
+                try {
+                    window.timeline.deleteTask(taskId);
+                    log('✅ Manual delete successful', 'success');
+                    updateStatus();
+                    displayTimeline();
+                } catch (error) {
+                    log(`❌ Manual delete failed: ${error.message}`, 'error');
+                }
+            } else {
+                log('❌ deleteTask method not available', 'error');
+            }
+        }
+
+        // Initialize
+        window.addEventListener('load', () => {
+            log('🚀 Page loaded, waiting for timeline...', 'info');
+            
+            // Check for timeline every 500ms
+            const checkInterval = setInterval(() => {
+                if (window.timeline) {
+                    log('✅ Timeline instance found!', 'success');
+                    clearInterval(checkInterval);
+                    checkTimeline();
+                }
+            }, 500);
+
+            // Timeout after 10 seconds
+            setTimeout(() => {
+                if (!window.timeline) {
+                    log('⏰ Timeout: Timeline not found after 10 seconds', 'warning');
+                    clearInterval(checkInterval);
+                }
+            }, 10000);
+        });
+
+        // Update status every 5 seconds
+        setInterval(() => {
+            if (window.timeline) {
+                updateStatus();
+            }
+        }, 5000);
+    </script>
+</body>
+</html> 

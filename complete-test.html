@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Complete Test - Timeline</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .test-section {
+            background: #f8f9fa;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            border: 1px solid #dee2e6;
+        }
+        .test-button {
+            background: #007bff;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px;
+            margin: 5px;
+            cursor: pointer;
+        }
+        .test-button:hover {
+            background: #0056b3;
+        }
+        .test-button:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+        .console-output {
+            background: #000;
+            color: #0f0;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: monospace;
+            max-height: 300px;
+            overflow-y: auto;
+            margin: 10px 0;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        .status.success { background: #d4edda; color: #155724; }
+        .status.error { background: #f8d7da; color: #721c24; }
+        .status.info { background: #d1ecf1; color: #0c5460; }
+        .status.warning { background: #fff3cd; color: #856404; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Complete Test - Timeline Magang</h1>
+        
+        <!-- Cloud Sync Configuration -->
+        <div class="sync-container">
+            <h2>Konfigurasi Cloud Sync</h2>
+            <div class="sync-info">
+                <p>Untuk menyinkronkan data antar device, masukkan GitHub Personal Access Token:</p>
+                <div class="token-input-group">
+                    <input type="password" id="github-token" placeholder="GitHub Personal Access Token" class="token-input">
+                    <button type="button" id="save-token-btn" class="btn-save-token">Simpan Token</button>
+                </div>
+                <div class="sync-status" id="sync-status">
+                    <span class="status-indicator offline"></span>
+                    <span class="status-text">Offline - Data tersimpan lokal</span>
+                </div>
+                <div class="sync-actions">
+                    <button type="button" id="sync-now-btn" class="btn-sync" disabled>Sinkronisasi Sekarang</button>
+                    <button type="button" id="refresh-cloud-btn" class="btn-refresh">Refresh dari Cloud</button>
+                    <button type="button" id="debug-state-btn" class="btn-debug">Debug State</button>
+                    <button type="button" id="clear-data-btn" class="btn-clear">Hapus Data Lokal</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3>🔧 Testing Tools</h3>
+            <button class="test-button" onclick="checkTimeline()" id="check-btn">🔍 Check Timeline</button>
+            <button class="test-button" onclick="addTestTask()" id="add-btn" disabled>➕ Add Test Task</button>
+            <button class="test-button" onclick="testEditButton()" id="edit-btn" disabled>✏️ Test Edit</button>
+            <button class="test-button" onclick="testDeleteButton()" id="delete-btn" disabled>🗑️ Test Delete</button>
+            <button class="test-button" onclick="clearConsole()">🧹 Clear Console</button>
+        </div>
+
+        <div class="test-section">
+            <h3>📊 Current State</h3>
+            <div id="state-info">Loading...</div>
+        </div>
+
+        <div class="test-section">
+            <h3>📝 Console Output</h3>
+            <div id="console-output" class="console-output"></div>
+        </div>
+
+        <!-- Form untuk menambah/edit daily task -->
+        <div class="form-container">
+            <h2 id="form-title">Tambah Aktivitas Hari Ini</h2>
+            <form id="daily-form">
+                <input type="hidden" id="edit-id" value="">
+                <div class="form-group">
+                    <label for="task-date">Tanggal:</label>
+                    <input type="date" id="task-date" required>
+                </div>
+                <div class="form-group">
+                    <label for="task-title">Judul Aktivitas:</label>
+                    <input type="text" id="task-title" placeholder="Contoh: Belajar React.js, Meeting dengan mentor, dll" required>
+                </div>
+                <div class="form-group">
+                    <label for="task-description">Deskripsi Detail:</label>
+                    <textarea id="task-description" placeholder="Jelaskan apa yang Anda lakukan hari ini, apa yang dipelajari, tantangan yang dihadapi, dll" required></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="task-category">Kategori:</label>
+                    <select id="task-category" required>
+                        <option value="Belajar">Belajar</option>
+                        <option value="Praktik">Praktik</option>
+                        <option value="Meeting">Meeting</option>
+                        <option value="Review">Review</option>
+                        <option value="Debugging">Debugging</option>
+                        <option value="Testing">Testing</option>
+                        <option value="Dokumentasi">Dokumentasi</option>
+                        <option value="Lainnya">Lainnya</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="task-duration">Durasi (jam):</label>
+                    <input type="number" id="task-duration" min="0.5" max="12" step="0.5" placeholder="2.5" required>
+                </div>
+                <div class="form-group">
+                    <label for="task-status">Status:</label>
+                    <select id="task-status" required>
+                        <option value="Selesai">Selesai</option>
+                        <option value="Sedang Berjalan">Sedang Berjalan</option>
+                        <option value="Belum Selesai">Belum Selesai</option>
+                        <option value="Ditunda">Ditunda</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="task-image">Upload Gambar (Opsional):</label>
+                    <input type="file" id="task-image" accept="image/*" class="file-input">
+                    <div class="image-preview" id="image-preview"></div>
+                </div>
+                <div class="form-buttons">
+                    <button type="submit" id="submit-btn">Tambah Aktivitas</button>
+                    <button type="button" id="cancel-btn" style="display: none;">Batal</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Timeline display -->
+        <div class="timeline-container">
+            <h2>Timeline Aktivitas Magang</h2>
+            <div class="timeline-filters">
+                <button class="filter-btn active" data-filter="all">Semua</button>
+                <button class="filter-btn" data-filter="Belajar">Belajar</button>
+                <button class="filter-btn" data-filter="Praktik">Praktik</button>
+                <button class="filter-btn" data-filter="Meeting">Meeting</button>
+                <button class="filter-btn" data-filter="Review">Review</button>
+            </div>
+            <div id="timeline"></div>
+        </div>
+    </div>
+
+    <script src="index.js"></script>
+    <script>
+        // Override console.log to show in our console output
+        const originalLog = console.log;
+        const originalError = console.error;
+        
+        function addToConsole(message, type = 'log') {
+            const consoleOutput = document.getElementById('console-output');
+            const timestamp = new Date().toLocaleTimeString();
+            const color = type === 'error' ? '#ff6b6b' : 
+                         type === 'success' ? '#51cf66' : 
+                         type === 'warning' ? '#ffd43b' : '#0f0';
+            consoleOutput.innerHTML += `<div style="color: ${color}">[${timestamp}] ${message}</div>`;
+            consoleOutput.scrollTop = consoleOutput.scrollHeight;
+        }
+        
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            addToConsole(args.join(' '));
+        };
+        
+        console.error = function(...args) {
+            originalError.apply(console, args);
+            addToConsole(args.join(' '), 'error');
+        };
+
+        // Check timeline availability
+        function checkTimeline() {
+            addToConsole('🔍 Checking timeline availability...', 'info');
+            
+            if (window.timeline) {
+                addToConsole('✅ Timeline instance found!', 'success');
+                
+                // Check if methods are available
+                const requiredMethods = ['addTask', 'editTask', 'deleteTask', 'debugCurrentState'];
+                const availableMethods = requiredMethods.filter(method => 
+                    typeof window.timeline[method] === 'function'
+                );
+                
+                if (availableMethods.length === requiredMethods.length) {
+                    addToConsole('✅ All required methods available', 'success');
+                    enableButtons();
+                } else {
+                    const missingMethods = requiredMethods.filter(method => 
+                        !availableMethods.includes(method)
+                    );
+                    addToConsole(`⚠️ Missing methods: ${missingMethods.join(', ')}`, 'warning');
+                }
+                
+                updateStateInfo();
+            } else {
+                addToConsole('❌ Timeline instance not found', 'error');
+                disableButtons();
+            }
+        }
+
+        // Enable/disable buttons
+        function enableButtons() {
+            document.getElementById('add-btn').disabled = false;
+            document.getElementById('edit-btn').disabled = false;
+            document.getElementById('delete-btn').disabled = false;
+        }
+
+        function disableButtons() {
+            document.getElementById('add-btn').disabled = true;
+            document.getElementById('edit-btn').disabled = true;
+            document.getElementById('delete-btn').disabled = true;
+        }
+
+        // Test functions
+        function addTestTask() {
+            if (window.timeline && typeof window.timeline.addTask === 'function') {
+                const testTask = {
+                    date: new Date().toISOString().split('T')[0],
+                    title: 'Test Task - ' + new Date().toLocaleTimeString(),
+                    description: 'This is a test task for debugging',
+                    category: 'Testing',
+                    duration: 1.0,
+                    status: 'Selesai',
+                    image: null
+                };
+                
+                try {
+                    window.timeline.addTask(testTask);
+                    addToConsole('✅ Test task added successfully', 'success');
+                    updateStateInfo();
+                } catch (error) {
+                    addToConsole(`❌ Failed to add task: ${error.message}`, 'error');
+                }
+            } else {
+                addToConsole('❌ Timeline instance not available or addTask method not found', 'error');
+            }
+        }
+
+        function testEditButton() {
+            if (window.timeline && window.timeline.dailyTasks && window.timeline.dailyTasks.length > 0) {
+                const firstTask = window.timeline.dailyTasks[0];
+                addToConsole(`🔍 Testing edit for task: ${firstTask.title} (ID: ${firstTask.id})`, 'info');
+                try {
+                    window.timeline.editTask(firstTask.id);
+                    addToConsole('✅ Edit test successful', 'success');
+                    updateStateInfo();
+                } catch (error) {
+                    addToConsole(`❌ Edit test failed: ${error.message}`, 'error');
+                }
+            } else {
+                addToConsole('❌ No tasks available for testing edit', 'error');
+            }
+        }
+
+        function testDeleteButton() {
+            if (window.timeline && window.timeline.dailyTasks && window.timeline.dailyTasks.length > 0) {
+                const firstTask = window.timeline.dailyTasks[0];
+                addToConsole(`🔍 Testing delete for task: ${firstTask.title} (ID: ${firstTask.id})`, 'info');
+                try {
+                    window.timeline.deleteTask(firstTask.id);
+                    addToConsole('✅ Delete test successful', 'success');
+                    updateStateInfo();
+                } catch (error) {
+                    addToConsole(`❌ Delete test failed: ${error.message}`, 'error');
+                }
+            } else {
+                addToConsole('❌ No tasks available for testing delete', 'error');
+            }
+        }
+
+        function clearConsole() {
+            document.getElementById('console-output').innerHTML = '';
+        }
+
+        function updateStateInfo() {
+            if (window.timeline && window.timeline.dailyTasks) {
+                const stateInfo = document.getElementById('state-info');
+                stateInfo.innerHTML = `
+                    <div class="status success">✅ Timeline Ready</div>
+                    <div class="status info">GitHub Token: ${window.timeline.githubToken ? '✅ Set' : '❌ Not set'}</div>
+                    <div class="status info">Gist ID: ${window.timeline.gistId || '❌ Not set'}</div>
+                    <div class="status info">Local Tasks: ${window.timeline.dailyTasks.length}</div>
+                    <div class="status info">Is Editing: ${window.timeline.isEditing ? '✅ Yes' : '❌ No'}</div>
+                    <div class="status info">Editing ID: ${window.timeline.editingId || 'None'}</div>
+                `;
+            } else if (window.timeline) {
+                document.getElementById('state-info').innerHTML = '<div class="status info">✅ Timeline Available (Loading data...)</div><div class="status info">Daily Tasks: Initializing...</div>';
+            } else {
+                document.getElementById('state-info').innerHTML = '<div class="status error">❌ Timeline Not Available</div>';
+            }
+        }
+
+        // Initialize when page loads
+        window.addEventListener('load', () => {
+            addToConsole('🚀 Page loaded, waiting for timeline to initialize...', 'info');
+            
+            // Check for timeline every 500ms
+            const checkInterval = setInterval(() => {
+                if (window.timeline) {
+                    addToConsole('✅ Timeline instance found!', 'success');
+                    clearInterval(checkInterval);
+                    checkTimeline();
+                }
+            }, 500);
+
+            // Timeout after 10 seconds
+            setTimeout(() => {
+                if (!window.timeline) {
+                    addToConsole('⏰ Timeout: Timeline not found after 10 seconds', 'warning');
+                    clearInterval(checkInterval);
+                }
+            }, 10000);
+        });
+
+        // Update state info every 5 seconds
+        setInterval(updateStateInfo, 5000);
+    </script>
+</body>
+</html> 
