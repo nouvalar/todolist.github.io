@@ -20,6 +20,7 @@ class DailyTimeline {
         const imageInput = document.getElementById('task-image');
         const saveTokenBtn = document.getElementById('save-token-btn');
         const syncNowBtn = document.getElementById('sync-now-btn');
+        const refreshCloudBtn = document.getElementById('refresh-cloud-btn');
         const clearDataBtn = document.getElementById('clear-data-btn');
 
         form.addEventListener('submit', (e) => this.handleFormSubmit(e));
@@ -35,13 +36,51 @@ class DailyTimeline {
         // Handle cloud sync
         saveTokenBtn.addEventListener('click', () => this.saveGitHubToken());
         syncNowBtn.addEventListener('click', () => this.manualSync());
+        refreshCloudBtn.addEventListener('click', () => this.forceRefreshFromCloud());
         clearDataBtn.addEventListener('click', () => this.clearLocalData());
         
         // Handle timeline actions with event delegation
         document.addEventListener('click', (e) => this.handleTimelineActions(e));
         
+        // Alternative: direct event listeners for timeline actions
+        document.addEventListener('click', (e) => {
+            if (e.target.matches('.btn-edit')) {
+                const taskId = parseInt(e.target.getAttribute('data-task-id'));
+                if (taskId) {
+                    console.log('Direct edit button click, task ID:', taskId);
+                    this.editTask(taskId);
+                }
+            }
+            
+            if (e.target.matches('.btn-delete')) {
+                const taskId = parseInt(e.target.getAttribute('data-task-id'));
+                if (taskId) {
+                    console.log('Direct delete button click, task ID:', taskId);
+                    this.deleteTask(taskId);
+                }
+            }
+        });
+        
         // Load saved token if exists
         this.loadGitHubToken();
+        
+        // Set up auto-sync every 30 seconds if token exists
+        this.setupAutoSync();
+    }
+
+    setupAutoSync() {
+        // Auto-sync every 30 seconds if token exists
+        setInterval(async () => {
+            if (this.githubToken && this.gistId) {
+                console.log('Auto-sync triggered');
+                try {
+                    await this.loadFromGist();
+                    this.renderTimeline();
+                } catch (error) {
+                    console.log('Auto-sync failed:', error);
+                }
+            }
+        }, 30000); // 30 seconds
     }
 
     handleTimelineActions(e) {
@@ -73,6 +112,11 @@ class DailyTimeline {
             const imageSrc = e.target.src;
             this.showImageModal(imageSrc);
         }
+        
+        // Debug: log all clicks to see what's happening
+        console.log('Clicked element:', e.target);
+        console.log('Element classes:', e.target.className);
+        console.log('Element attributes:', e.target.attributes);
     }
 
     async loadData() {
@@ -92,20 +136,31 @@ class DailyTimeline {
             const storedGistId = localStorage.getItem('timelineGistId');
             if (storedGistId) {
                 this.gistId = storedGistId;
+                console.log('Loading from Gist ID:', storedGistId);
+                
                 const response = await fetch(`https://api.github.com/gists/${storedGistId}`);
                 if (response.ok) {
                     const gist = await response.json();
                     const timelineFile = gist.files['timeline-data.json'];
                     if (timelineFile && timelineFile.content) {
                         const remoteData = JSON.parse(timelineFile.content);
+                        console.log('Remote data loaded:', remoteData);
+                        
                         // Merge remote data with local data, prioritizing remote
-                        this.dailyTasks = this.mergeData(remoteData, this.dailyTasks);
+                        this.dailyTasks = this.mergeData(remoteData.dailyTasks || remoteData, this.dailyTasks);
                         this.saveToLocalStorage();
                         this.showNotification('Data berhasil disinkronisasi dari cloud!', 'success');
+                    } else {
+                        console.log('No timeline data found in Gist');
                     }
+                } else {
+                    console.log('Failed to fetch Gist:', response.status);
                 }
+            } else {
+                console.log('No Gist ID stored locally');
             }
         } catch (error) {
+            console.error('Error loading from Gist:', error);
             console.log('Tidak bisa memuat data dari cloud, menggunakan data lokal');
         }
     }
@@ -544,9 +599,29 @@ class DailyTimeline {
 
     async manualSync() {
         if (this.githubToken) {
+            console.log('Manual sync triggered');
             await this.saveToCloud();
             await this.loadFromGist();
             this.renderTimeline();
+            this.showNotification('Sinkronisasi manual selesai!', 'success');
+        } else {
+            this.showNotification('Token GitHub belum dikonfigurasi', 'error');
+        }
+    }
+
+    async forceRefreshFromCloud() {
+        if (this.githubToken && this.gistId) {
+            console.log('Force refresh from cloud');
+            try {
+                await this.loadFromGist();
+                this.renderTimeline();
+                this.showNotification('Data berhasil di-refresh dari cloud!', 'success');
+            } catch (error) {
+                console.error('Force refresh failed:', error);
+                this.showNotification('Gagal refresh data dari cloud', 'error');
+            }
+        } else {
+            this.showNotification('Token GitHub atau Gist ID tidak tersedia', 'error');
         }
     }
 

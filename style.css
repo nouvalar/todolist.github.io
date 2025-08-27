@@ -130,7 +130,7 @@ h1 {
     flex-wrap: wrap;
 }
 
-.btn-sync, .btn-clear {
+.btn-sync, .btn-refresh, .btn-clear {
     padding: 10px 20px;
     border: 2px solid rgba(255,255,255,0.3);
     border-radius: 6px;
@@ -141,7 +141,7 @@ h1 {
     color: white;
 }
 
-.btn-sync:hover, .btn-clear:hover {
+.btn-sync:hover, .btn-refresh:hover, .btn-clear:hover {
     background: rgba(255,255,255,0.2);
     border-color: rgba(255,255,255,0.5);
 }
