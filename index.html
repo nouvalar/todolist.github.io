@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Timeline Magang Harian</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Timeline Magang Harian</h1>
+        
+        <!-- Form untuk menambah/edit daily task -->
+        <div class="form-container">
+            <h2 id="form-title">Tambah Aktivitas Hari Ini</h2>
+            <form id="daily-form">
+                <input type="hidden" id="edit-id" value="">
+                <div class="form-group">
+                    <label for="task-date">Tanggal:</label>
+                    <input type="date" id="task-date" required>
+                </div>
+                <div class="form-group">
+                    <label for="task-title">Judul Aktivitas:</label>
+                    <input type="text" id="task-title" placeholder="Contoh: Belajar React.js, Meeting dengan mentor, dll" required>
+                </div>
+                <div class="form-group">
+                    <label for="task-description">Deskripsi Detail:</label>
+                    <textarea id="task-description" placeholder="Jelaskan apa yang Anda lakukan hari ini, apa yang dipelajari, tantangan yang dihadapi, dll" required></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="task-category">Kategori:</label>
+                    <select id="task-category" required>
+                        <option value="Belajar">Belajar</option>
+                        <option value="Praktik">Praktik</option>
+                        <option value="Meeting">Meeting</option>
+                        <option value="Review">Review</option>
+                        <option value="Debugging">Debugging</option>
+                        <option value="Testing">Testing</option>
+                        <option value="Dokumentasi">Dokumentasi</option>
+                        <option value="Lainnya">Lainnya</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="task-duration">Durasi (jam):</label>
+                    <input type="number" id="task-duration" min="0.5" max="12" step="0.5" placeholder="2.5" required>
+                </div>
+                <div class="form-group">
+                    <label for="task-status">Status:</label>
+                    <select id="task-status" required>
+                        <option value="Selesai">Selesai</option>
+                        <option value="Sedang Berjalan">Sedang Berjalan</option>
+                        <option value="Belum Selesai">Belum Selesai</option>
+                        <option value="Ditunda">Ditunda</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="task-image">Upload Gambar (Opsional):</label>
+                    <input type="file" id="task-image" accept="image/*" class="file-input">
+                    <div class="image-preview" id="image-preview"></div>
+                </div>
+                <div class="form-buttons">
+                    <button type="submit" id="submit-btn">Tambah Aktivitas</button>
+                    <button type="button" id="cancel-btn" style="display: none;">Batal</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Timeline display -->
+        <div class="timeline-container">
+            <h2>Timeline Aktivitas Magang</h2>
+            <div class="timeline-filters">
+                <button class="filter-btn active" data-filter="all">Semua</button>
+                <button class="filter-btn" data-filter="Belajar">Belajar</button>
+                <button class="filter-btn" data-filter="Praktik">Praktik</button>
+                <button class="filter-btn" data-filter="Meeting">Meeting</button>
+                <button class="filter-btn" data-filter="Review">Review</button>
+            </div>
+            <div id="timeline"></div>
+        </div>
+    </div>
+
+    <script src="index.js"></script>
+</body>
+</html>
