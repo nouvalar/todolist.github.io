@@ -1,13 +1,15 @@
 class DailyTimeline {
     constructor() {
-        this.dailyTasks = JSON.parse(localStorage.getItem('dailyTasks')) || [];
+        this.dailyTasks = [];
         this.isEditing = false;
         this.editingId = null;
         this.currentFilter = 'all';
         this.currentImageData = null;
+        this.gistId = null;
+        this.githubToken = null;
         
         this.initializeEventListeners();
-        this.renderTimeline();
+        this.loadData();
         this.createImageModal();
     }
 
@@ -16,6 +18,9 @@ class DailyTimeline {
         const cancelBtn = document.getElementById('cancel-btn');
         const filterBtns = document.querySelectorAll('.filter-btn');
         const imageInput = document.getElementById('task-image');
+        const saveTokenBtn = document.getElementById('save-token-btn');
+        const syncNowBtn = document.getElementById('sync-now-btn');
+        const clearDataBtn = document.getElementById('clear-data-btn');
 
         form.addEventListener('submit', (e) => this.handleFormSubmit(e));
         cancelBtn.addEventListener('click', () => this.cancelEdit());
@@ -26,6 +31,128 @@ class DailyTimeline {
         
         // Handle image upload and preview
         imageInput.addEventListener('change', (e) => this.handleImageUpload(e));
+        
+        // Handle cloud sync
+        saveTokenBtn.addEventListener('click', () => this.saveGitHubToken());
+        syncNowBtn.addEventListener('click', () => this.manualSync());
+        clearDataBtn.addEventListener('click', () => this.clearLocalData());
+        
+        // Load saved token if exists
+        this.loadGitHubToken();
+    }
+
+    async loadData() {
+        // Try to load from localStorage first (for offline support)
+        const localData = JSON.parse(localStorage.getItem('dailyTasks')) || [];
+        this.dailyTasks = localData;
+        
+        // Try to load from GitHub Gist if available
+        await this.loadFromGist();
+        
+        this.renderTimeline();
+    }
+
+    async loadFromGist() {
+        try {
+            // Check if we have stored Gist ID
+            const storedGistId = localStorage.getItem('timelineGistId');
+            if (storedGistId) {
+                this.gistId = storedGistId;
+                const response = await fetch(`https://api.github.com/gists/${storedGistId}`);
+                if (response.ok) {
+                    const gist = await response.json();
+                    const timelineFile = gist.files['timeline-data.json'];
+                    if (timelineFile && timelineFile.content) {
+                        const remoteData = JSON.parse(timelineFile.content);
+                        // Merge remote data with local data, prioritizing remote
+                        this.dailyTasks = this.mergeData(remoteData, this.dailyTasks);
+                        this.saveToLocalStorage();
+                        this.showNotification('Data berhasil disinkronisasi dari cloud!', 'success');
+                    }
+                }
+            }
+        } catch (error) {
+            console.log('Tidak bisa memuat data dari cloud, menggunakan data lokal');
+        }
+    }
+
+    mergeData(remoteData, localData) {
+        // Create a map of local data by ID
+        const localMap = new Map(localData.map(item => [item.id, item]));
+        
+        // Merge remote data, keeping the most recent version
+        remoteData.forEach(remoteItem => {
+            const localItem = localMap.get(remoteItem.id);
+            if (!localItem || new Date(remoteItem.updatedAt || remoteItem.createdAt) > new Date(localItem.updatedAt || localItem.createdAt)) {
+                localMap.set(remoteItem.id, remoteItem);
+            }
+        });
+        
+        return Array.from(localMap.values());
+    }
+
+    async saveToCloud() {
+        if (!this.githubToken) {
+            this.showNotification('Token GitHub belum dikonfigurasi', 'error');
+            return;
+        }
+
+        try {
+            const data = {
+                dailyTasks: this.dailyTasks,
+                lastUpdated: new Date().toISOString()
+            };
+
+            if (!this.gistId) {
+                // Create new Gist
+                const response = await fetch('https://api.github.com/gists', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `token ${this.githubToken}`,
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        description: 'Timeline Magang Harian Data',
+                        public: false,
+                        files: {
+                            'timeline-data.json': {
+                                content: JSON.stringify(data, null, 2)
+                            }
+                        }
+                    })
+                });
+
+                if (response.ok) {
+                    const gist = await response.json();
+                    this.gistId = gist.id;
+                    localStorage.setItem('timelineGistId', this.gistId);
+                    this.showNotification('Data berhasil disimpan ke cloud!', 'success');
+                }
+            } else {
+                // Update existing Gist
+                const response = await fetch(`https://api.github.com/gists/${this.gistId}`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Authorization': `token ${this.githubToken}`,
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        files: {
+                            'timeline-data.json': {
+                                content: JSON.stringify(data, null, 2)
+                            }
+                        }
+                    })
+                });
+
+                if (response.ok) {
+                    this.showNotification('Data berhasil diupdate ke cloud!', 'success');
+                }
+            }
+        } catch (error) {
+            console.error('Error saving to cloud:', error);
+            this.showNotification('Gagal menyimpan ke cloud, data tersimpan lokal saja', 'error');
+        }
     }
 
     handleFilter(e) {
@@ -64,7 +191,7 @@ class DailyTimeline {
         this.renderTimeline();
     }
 
-    addTask(taskData) {
+    async addTask(taskData) {
         const task = {
             id: Date.now(),
             ...taskData,
@@ -73,12 +200,16 @@ class DailyTimeline {
         
         this.dailyTasks.push(task);
         this.saveToLocalStorage();
+        
+        // Try to save to cloud
+        await this.saveToCloud();
+        
         this.showNotification('Aktivitas berhasil ditambahkan!', 'success');
         this.currentImageData = null;
         this.clearImagePreview();
     }
 
-    updateTask(id, taskData) {
+    async updateTask(id, taskData) {
         const index = this.dailyTasks.findIndex(t => t.id === id);
         if (index !== -1) {
             this.dailyTasks[index] = {
@@ -87,14 +218,22 @@ class DailyTimeline {
                 updatedAt: new Date().toISOString()
             };
             this.saveToLocalStorage();
+            
+            // Try to save to cloud
+            await this.saveToCloud();
+            
             this.showNotification('Aktivitas berhasil diupdate!', 'success');
         }
     }
 
-    deleteTask(id) {
+    async deleteTask(id) {
         if (confirm('Apakah Anda yakin ingin menghapus aktivitas ini?')) {
             this.dailyTasks = this.dailyTasks.filter(t => t.id !== id);
             this.saveToLocalStorage();
+            
+            // Try to save to cloud
+            await this.saveToCloud();
+            
             this.renderTimeline();
             this.showNotification('Aktivitas berhasil dihapus!', 'success');
         }
@@ -320,6 +459,64 @@ class DailyTimeline {
 
     saveToLocalStorage() {
         localStorage.setItem('dailyTasks', JSON.stringify(this.dailyTasks));
+    }
+
+    loadGitHubToken() {
+        const token = localStorage.getItem('githubToken');
+        if (token) {
+            this.githubToken = token;
+            document.getElementById('github-token').value = token;
+            this.updateSyncStatus(true);
+        }
+    }
+
+    saveGitHubToken() {
+        const token = document.getElementById('github-token').value.trim();
+        if (token) {
+            this.githubToken = token;
+            localStorage.setItem('githubToken', token);
+            this.updateSyncStatus(true);
+            this.showNotification('GitHub token berhasil disimpan!', 'success');
+            
+            // Try to sync existing data
+            this.saveToCloud();
+        } else {
+            this.showNotification('Token tidak boleh kosong!', 'error');
+        }
+    }
+
+    updateSyncStatus(isOnline) {
+        const statusIndicator = document.querySelector('.status-indicator');
+        const statusText = document.querySelector('.status-text');
+        const syncBtn = document.getElementById('sync-now-btn');
+        
+        if (isOnline) {
+            statusIndicator.className = 'status-indicator online';
+            statusText.textContent = 'Online - Data tersinkronisasi ke cloud';
+            syncBtn.disabled = false;
+        } else {
+            statusIndicator.className = 'status-indicator offline';
+            statusText.textContent = 'Offline - Data tersimpan lokal';
+            syncBtn.disabled = true;
+        }
+    }
+
+    async manualSync() {
+        if (this.githubToken) {
+            await this.saveToCloud();
+            await this.loadFromGist();
+            this.renderTimeline();
+        }
+    }
+
+    clearLocalData() {
+        if (confirm('Apakah Anda yakin ingin menghapus semua data lokal? Data di cloud tidak akan terhapus.')) {
+            localStorage.removeItem('dailyTasks');
+            localStorage.removeItem('timelineGistId');
+            this.dailyTasks = [];
+            this.renderTimeline();
+            this.showNotification('Data lokal berhasil dihapus!', 'success');
+        }
     }
 
     showNotification(message, type = 'info') {

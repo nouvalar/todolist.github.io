@@ -29,6 +29,128 @@ h1 {
     margin: 0;
 }
 
+.sync-container {
+    padding: 30px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    text-align: center;
+}
+
+.sync-container h2 {
+    color: white;
+    margin-bottom: 20px;
+}
+
+.sync-info p {
+    margin-bottom: 20px;
+    font-size: 16px;
+    opacity: 0.9;
+}
+
+.token-input-group {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+.token-input {
+    flex: 1;
+    min-width: 300px;
+    padding: 12px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-radius: 8px;
+    font-size: 16px;
+    background: rgba(255,255,255,0.1);
+    color: white;
+    backdrop-filter: blur(10px);
+}
+
+.token-input::placeholder {
+    color: rgba(255,255,255,0.7);
+}
+
+.token-input:focus {
+    outline: none;
+    border-color: rgba(255,255,255,0.8);
+    background: rgba(255,255,255,0.2);
+}
+
+.btn-save-token {
+    padding: 12px 24px;
+    background: rgba(255,255,255,0.2);
+    color: white;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+}
+
+.btn-save-token:hover {
+    background: rgba(255,255,255,0.3);
+    border-color: rgba(255,255,255,0.5);
+}
+
+.sync-status {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 20px;
+    padding: 15px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 8px;
+    backdrop-filter: blur(10px);
+}
+
+.status-indicator {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.status-indicator.online {
+    background: #00b894;
+    box-shadow: 0 0 10px rgba(0, 184, 148, 0.5);
+}
+
+.status-indicator.offline {
+    background: #e17055;
+    box-shadow: 0 0 10px rgba(225, 112, 85, 0.5);
+}
+
+.sync-actions {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.btn-sync, .btn-clear {
+    padding: 10px 20px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: rgba(255,255,255,0.1);
+    color: white;
+}
+
+.btn-sync:hover, .btn-clear:hover {
+    background: rgba(255,255,255,0.2);
+    border-color: rgba(255,255,255,0.5);
+}
+
+.btn-sync:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
 .form-container {
     padding: 30px;
     background: #f8f9fa;
@@ -602,7 +724,22 @@ button {
         max-height: 150px;
     }
     
-    .timeline-image img {
-        max-height: 150px;
+    .token-input-group {
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .token-input {
+        min-width: 250px;
+        width: 100%;
+    }
+    
+    .sync-actions {
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .btn-sync, .btn-clear {
+        width: 200px;
     }
 }

@@ -10,6 +10,26 @@
     <div class="container">
         <h1>Timeline Magang Harian</h1>
         
+        <!-- Cloud Sync Configuration -->
+        <div class="sync-container">
+            <h2>Konfigurasi Cloud Sync</h2>
+            <div class="sync-info">
+                <p>Untuk menyinkronkan data antar device, masukkan GitHub Personal Access Token:</p>
+                <div class="token-input-group">
+                    <input type="password" id="github-token" placeholder="GitHub Personal Access Token" class="token-input">
+                    <button type="button" id="save-token-btn" class="btn-save-token">Simpan Token</button>
+                </div>
+                <div class="sync-status" id="sync-status">
+                    <span class="status-indicator offline"></span>
+                    <span class="status-text">Offline - Data tersimpan lokal</span>
+                </div>
+                <div class="sync-actions">
+                    <button type="button" id="sync-now-btn" class="btn-sync" disabled>Sinkronisasi Sekarang</button>
+                    <button type="button" id="clear-data-btn" class="btn-clear">Hapus Data Lokal</button>
+                </div>
+            </div>
+        </div>
+
         <!-- Form untuk menambah/edit daily task -->
         <div class="form-container">
             <h2 id="form-title">Tambah Aktivitas Hari Ini</h2>
